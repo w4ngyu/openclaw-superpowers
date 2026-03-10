@@ -1,0 +1,10 @@
+{
+  "name": "openclaw-superpower",
+  "version": "5.0.0-openclaw",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "openclaw": {
+    "extensions": ["./dist/index.js"]
+  }
+}

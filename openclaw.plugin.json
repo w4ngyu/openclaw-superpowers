@@ -1,0 +1,62 @@
+{
+  "id": "superpowers",
+  "name": "Superpowers (Claude Code)",
+  "description": "Bring the Claude Code Superpowers skills library into OpenClaw, with optional auto-selection and prompt injection.",
+  "version": "5.0.0-openclaw",
+  "author": "obra/superpowers (packaged for OpenClaw)",
+  "homepage": "https://github.com/obra/superpowers",
+  "skills": [
+    "skills/brainstorming",
+    "skills/dispatching-parallel-agents",
+    "skills/executing-plans",
+    "skills/finishing-a-development-branch",
+    "skills/receiving-code-review",
+    "skills/requesting-code-review",
+    "skills/subagent-driven-development",
+    "skills/systematic-debugging",
+    "skills/test-driven-development",
+    "skills/using-git-worktrees",
+    "skills/using-superpowers",
+    "skills/verification-before-completion",
+    "skills/writing-plans",
+    "skills/writing-skills"
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable the superpowers plugin."
+      },
+      "autoSelect": {
+        "type": "boolean",
+        "default": true,
+        "description": "Auto-select a suitable superpowers skill based on the user prompt."
+      },
+      "injectSkillText": {
+        "type": "boolean",
+        "default": true,
+        "description": "Inject the selected skill guidance into the agent prompt context."
+      },
+      "showTip": {
+        "type": "boolean",
+        "default": true,
+        "description": "Show a short usage tip in prependContext each run (recommended)."
+      },
+      "maxInjectedChars": {
+        "type": "number",
+        "default": 9000,
+        "minimum": 1000,
+        "maximum": 30000,
+        "description": "Max characters of SKILL.md to inject when auto-selected."
+      },
+      "defaultSkill": {
+        "type": "string",
+        "default": "using-superpowers",
+        "description": "Fallback skill when autoSelect is enabled but no strong match is found."
+      }
+    }
+  }
+}
