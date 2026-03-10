@@ -15,17 +15,17 @@
 
 ## 安装（macOS / Linux）
 
-Pick one method.
+二选一即可：
 
 ### 方法 A：直接 clone 到 OpenClaw 扩展目录（推荐）
 
 ```bash
 mkdir -p ~/.openclaw/extensions
 cd ~/.openclaw/extensions
-git clone <YOUR_GITHUB_REPO_URL> superpowers
+git clone https://github.com/w4ngyu/openclaw-superpowers.git superpowers
 ```
 
-Verify files exist:
+验证文件存在：
 
 ```bash
 ls -la ~/.openclaw/extensions/superpowers/openclaw.plugin.json
@@ -44,10 +44,10 @@ Copy this repo folder to:
 ```powershell
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.openclaw\extensions" | Out-Null
 cd "$env:USERPROFILE\.openclaw\extensions"
-git clone <YOUR_GITHUB_REPO_URL> superpowers
+git clone https://github.com/w4ngyu/openclaw-superpowers.git superpowers
 ```
 
-Verify:
+验证文件存在：
 
 ```powershell
 Test-Path "$env:USERPROFILE\.openclaw\extensions\superpowers\openclaw.plugin.json"
@@ -69,9 +69,9 @@ openclaw plugins list
 
 ## 可选配置（按需）
 
-All config lives under `plugins.entries.superpowers.config`.
+所有配置都在 `plugins.entries.superpowers.config` 下。
 
-Examples:
+示例：
 
 ```bash
 # Turn off the per-run tip text (keeps auto injection if enabled)
@@ -87,7 +87,7 @@ openclaw config set plugins.entries.superpowers.config.injectSkillText false
 openclaw config set plugins.entries.superpowers.config.maxInjectedChars 12000
 ```
 
-Validate:
+验证配置合法：
 
 ```bash
 openclaw config validate
@@ -101,14 +101,14 @@ openclaw config validate
 
 ### 2）手动（命令，确定性）
 
-In any OpenClaw chat surface (WebUI / Telegram / Discord), send:
+在任意 OpenClaw 对话入口（WebUI / Telegram / Discord）发送：
 
 - `/superpowers systematic-debugging summary`
 - `/superpowers test-driven-development full`
 
 ### 3）手动（工具，给 LLM 调用）
 
-Ask the agent to call:
+让智能体调用：
 
 - `superpowers({ skill: "systematic-debugging", mode: "summary" })`
 
@@ -116,11 +116,11 @@ Ask the agent to call:
 
 ### 插件找不到 / 没有加载（Plugin not found / not loaded）
 
-- Ensure the folder name is exactly `superpowers` under your extensions root:
+- 确认扩展目录下的文件夹名必须是 `superpowers`：
   - macOS: `~/.openclaw/extensions/superpowers/`
   - Windows: `%USERPROFILE%\.openclaw\extensions\superpowers\`
-- Ensure `openclaw.plugin.json` exists in that folder.
-- Run:
+- 确认该目录下存在 `openclaw.plugin.json`
+- 执行：
 
 ```bash
 openclaw plugins list
@@ -129,11 +129,11 @@ openclaw config validate
 
 ### skills 缺失（Skills missing）
 
-- Ensure `skills/<name>/SKILL.md` exists inside the plugin folder.
+- 确认插件目录内存在 `skills/<name>/SKILL.md`
 
 ### 本地 `gateway closed (1006 abnormal closure …)`（常见是代理导致）
 
-This is commonly caused by proxy environment variables affecting local WS connections.
+常见原因：代理环境变量影响本地 WS 连接（`ALL_PROXY/HTTP_PROXY/HTTPS_PROXY`）。
 
 Try (macOS/Linux):
 
@@ -170,6 +170,6 @@ openclaw config set plugins.entries.superpowers.config.showTip false
 
 ## License / 致谢
 
-- 上游 Superpowers 是 MIT License（见 `LICENSE`）。
-- 本仓库在此基础上增加了 OpenClaw 插件封装与文档（见 `NOTICE.md`）。
-- 你在二次分发时请保留 MIT 授权声明。
+- 本项目基于上游 Superpowers（MIT License，见 `LICENSE`）。
+- 本仓库仅增加 OpenClaw 插件封装与安装文档（细节见 `NOTICE.md`）。
+- 二次分发请保留许可证与版权声明（MIT 要求）。
