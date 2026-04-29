@@ -101,6 +101,19 @@ function chooseSkillHeuristic(prompt, defaultSkill, skills) {
   return list[0] || "using-superpowers";
 }
 
+function normalizeSkillList(rawList, availableSkills) {
+  if (!Array.isArray(rawList)) return [];
+  const allowed = new Set(Array.isArray(availableSkills) ? availableSkills : []);
+  const out = [];
+  for (const item of rawList) {
+    const n = normalizeSkillName(item);
+    if (!n) continue;
+    if (allowed.size && !allowed.has(n)) continue;
+    if (!out.includes(n)) out.push(n);
+  }
+  return out;
+}
+
 function clip(text, maxChars) {
   const t = String(text || "");
   if (t.length <= maxChars) return t;
@@ -185,7 +198,7 @@ function buildInjectedContext(skillName, skillText) {
   return [
     "Superpowers (Claude Code) plugin:",
     `- Selected workflow skill: ${skillName}`,
-    "Instruction: You MUST follow this skill's workflow for this task unless the user explicitly requests otherwise.",
+    "Instruction: Follow this skill workflow unless the user explicitly overrides it.",
     "",
     `--- ${skillName}/SKILL.md ---`,
     skillText,
@@ -218,8 +231,20 @@ const SuperpowersToolSchema = {
 
 function summarizeSkillText(text, maxChars) {
   const lines = String(text || "").split(/\n/);
-  const head = lines.slice(0, 120).join("\n");
-  return clip(head, maxChars);
+  const compact = [];
+  let blankRun = 0;
+  for (const line of lines.slice(0, 80)) {
+    const trimmed = line.replace(/\s+$/g, "");
+    if (!trimmed) {
+      blankRun += 1;
+      if (blankRun > 1) continue;
+      compact.push("");
+      continue;
+    }
+    blankRun = 0;
+    compact.push(trimmed);
+  }
+  return clip(compact.join("\n"), maxChars);
 }
 
 export default function superpowersPlugin(api) {
@@ -230,15 +255,18 @@ export default function superpowersPlugin(api) {
   const injectSkillText = cfg.injectSkillText !== false;
   const showTip = cfg.showTip !== false;
   const maxInjectedChars = toInt(cfg.maxInjectedChars, 9000);
+  const injectionMode = cfg.injectionMode === "full" ? "full" : "summary";
   const defaultSkill = cfg.defaultSkill || "using-superpowers";
 
   api.logger?.info?.(
-    `[superpowers] plugin loaded (autoSelect=${autoSelect}, injectSkillText=${injectSkillText}, showTip=${showTip})`,
+    `[superpowers] plugin loaded (autoSelect=${autoSelect}, injectSkillText=${injectSkillText}, showTip=${showTip}, injectionMode=${injectionMode})`,
   );
 
   api.on("before_prompt_build", async (event) => {
     const prompt = typeof event?.prompt === "string" ? event.prompt : "";
     const skills = await getAvailableSkills();
+    const autoSelectSkills = normalizeSkillList(cfg.autoSelectSkills, skills);
+    const heuristicPool = autoSelectSkills.length ? autoSelectSkills : skills;
 
     const tip = showTip
       ? [
@@ -253,11 +281,15 @@ export default function superpowersPlugin(api) {
     if (injectSkillText && prompt.trim().length >= 5) {
       const explicit = findExplicitSkill(prompt, skills);
       const chosen =
-        explicit || (autoSelect ? chooseSkillHeuristic(prompt, defaultSkill, skills) : "");
+        explicit || (autoSelect ? chooseSkillHeuristic(prompt, defaultSkill, heuristicPool) : "");
       if (chosen) {
         try {
           const skillMd = await readSkillMarkdown(api, chosen);
-          injected = buildInjectedContext(chosen, clip(skillMd, maxInjectedChars));
+          const injectedSkill =
+            injectionMode === "full"
+              ? clip(skillMd, maxInjectedChars)
+              : summarizeSkillText(skillMd, maxInjectedChars);
+          injected = buildInjectedContext(chosen, injectedSkill);
         } catch (e) {
           api.logger?.warn?.(
             `[superpowers] failed to read SKILL.md for ${chosen}: ${String(e)}`,

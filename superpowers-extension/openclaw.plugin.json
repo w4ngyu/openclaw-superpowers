@@ -52,6 +52,23 @@
         "maximum": 30000,
         "description": "Max characters of SKILL.md to inject when auto-selected."
       },
+      "injectionMode": {
+        "type": "string",
+        "enum": [
+          "summary",
+          "full"
+        ],
+        "default": "summary",
+        "description": "Use summary or full SKILL.md text when injecting prompt context."
+      },
+      "autoSelectSkills": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": [],
+        "description": "Optional allowlist for auto-selection pool. Empty means all available skills."
+      },
       "defaultSkill": {
         "type": "string",
         "default": "using-superpowers",

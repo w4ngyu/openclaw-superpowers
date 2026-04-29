@@ -1,5 +1,5 @@
 {
-  "name": "openclaw-superpower",
+  "name": "@openclaw/superpowers",
   "version": "5.0.0-openclaw",
   "private": true,
   "type": "module",

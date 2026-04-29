@@ -1,175 +1,146 @@
-# openclaw-superpowers（OpenClaw 插件版 Superpowers）
+# OpenClaw Superpowers v2.0.0
 
-把 **Claude Code Superpowers** 以 **OpenClaw 原生插件**的方式接入：
+OpenClaw-optimized Superpowers plugin package based on Claude Code Superpowers, tuned for lower prompt bloat and more stable auto-routing in long-running sessions.
 
-- 自动：根据你的提问自动选择合适的 workflow skill，并（可选）把对应 `SKILL.md` 注入到本次 run 的 `prependContext`
-- 手动：
-  - 工具（给 LLM 调用）：`superpowers({ skill, mode, maxChars })`
-  - 命令（确定性、不依赖 LLM）：`/superpowers <skill> [summary|full]`
+## What this is
 
-> 安全提示：OpenClaw 插件在 Gateway 进程内运行，属于 **受信任代码**。只安装你信任的代码。
+This distribution keeps the original Superpowers skills set, and adds OpenClaw runtime optimizations:
 
-## 依赖 / 版本要求
+- Summary-first injection (`injectionMode: summary`)
+- Injection size cap (`maxInjectedChars: 3600`)
+- Auto-select skill allowlist (high-frequency skills only)
+- Optional nudge hook + bootstrap integration
 
-- OpenClaw `2026.3.x`（或更高版本且插件 API 兼容）
+Upstream reference:
+- `obra/superpowers`: https://github.com/obra/superpowers
+- Claude plugin page: https://claude.com/plugins/superpowers
 
-## 安装（macOS / Linux）
+## Package layout
 
-二选一即可：
+- `superpowers-extension/`
+  - OpenClaw plugin runtime (`dist/index.js`)
+  - Plugin manifest (`openclaw.plugin.json`)
+  - Skills library (`skills/*`)
+- `templates/openclaw.superpowers.config.template.json`
+  - Production-tested plugin config template
+- `integration/BOOTSTRAP.md`
+  - Session bootstrap guidance (optional but recommended)
+- `integration/superpowers-nudge.*`
+  - Optional nudge hook assets
 
-### 方法 A：直接 clone 到 OpenClaw 扩展目录（推荐）
+## Key differences vs upstream
+
+1. Host targeting
+   - Upstream: multi-host skill framework
+   - This package: OpenClaw-native plugin wrapper + runtime behavior
+
+2. Prompt budget control
+   - Uses summary injection by default
+   - Caps injected chars to reduce context inflation
+
+3. Safer auto-routing
+   - Uses explicit high-frequency allowlist for `autoSelectSkills`
+   - Reduces low-frequency accidental matches
+
+4. Manual control preserved
+   - Keeps full skills directory
+   - Supports manual skill invocation paths
+
+## Install (macOS/Linux)
+
+1. Copy extension directory:
 
 ```bash
 mkdir -p ~/.openclaw/extensions
-cd ~/.openclaw/extensions
-git clone https://github.com/w4ngyu/openclaw-superpowers.git superpowers
+rsync -a superpowers-extension/ ~/.openclaw/extensions/superpowers/
 ```
 
-验证文件存在：
+2. Merge plugin entry config from template into `~/.openclaw/openclaw.json`:
+
+- Copy `pluginEntry` into `plugins.entries.superpowers`
+- Ensure plugin is enabled
+
+3. Optional: install integration files:
 
 ```bash
-ls -la ~/.openclaw/extensions/superpowers/openclaw.plugin.json
-ls -la ~/.openclaw/extensions/superpowers/dist/index.js
-find ~/.openclaw/extensions/superpowers/skills -maxdepth 2 -name SKILL.md | wc -l
+mkdir -p ~/.openclaw/workspace/bootstrap/superpowers
+cp integration/BOOTSTRAP.md ~/.openclaw/workspace/bootstrap/superpowers/BOOTSTRAP.md
 ```
 
-### 方法 B：直接复制文件夹
-
-Copy this repo folder to:
-
-- `~/.openclaw/extensions/superpowers/`
-
-## 安装（Windows / PowerShell）
-
-```powershell
-New-Item -ItemType Directory -Force "$env:USERPROFILE\.openclaw\extensions" | Out-Null
-cd "$env:USERPROFILE\.openclaw\extensions"
-git clone https://github.com/w4ngyu/openclaw-superpowers.git superpowers
-```
-
-验证文件存在：
-
-```powershell
-Test-Path "$env:USERPROFILE\.openclaw\extensions\superpowers\openclaw.plugin.json"
-Test-Path "$env:USERPROFILE\.openclaw\extensions\superpowers\dist\index.js"
-```
-
-## 启用插件（不要手写改配置）
+Optional nudge hook:
 
 ```bash
-openclaw plugins enable superpowers
-openclaw config validate
-openclaw plugins list
+mkdir -p ~/.openclaw/hooks/superpowers-nudge
+cp integration/superpowers-nudge.HOOK.md ~/.openclaw/hooks/superpowers-nudge/HOOK.md
+cp integration/superpowers-nudge.handler.js ~/.openclaw/hooks/superpowers-nudge/handler.js
 ```
 
-如果你更新了插件代码，需要 **重启 Gateway** 才会加载新代码。
-
-- If you run a Gateway service unit: `openclaw gateway restart`
-- If your Gateway is supervised by another process (phoenix/leader-manager/etc.), restart via that supervisor.
-
-## 可选配置（按需）
-
-所有配置都在 `plugins.entries.superpowers.config` 下。
-
-示例：
+4. Restart OpenClaw node:
 
 ```bash
-# Turn off the per-run tip text (keeps auto injection if enabled)
-openclaw config set plugins.entries.superpowers.config.showTip false
-
-# Disable auto-selection (only inject when user explicitly mentions a skill name)
-openclaw config set plugins.entries.superpowers.config.autoSelect false
-
-# Disable skill text injection entirely (keeps tool + command)
-openclaw config set plugins.entries.superpowers.config.injectSkillText false
-
-# Adjust injected size limit
-openclaw config set plugins.entries.superpowers.config.maxInjectedChars 12000
+openclaw node restart
 ```
 
-验证配置合法：
+## Recommended runtime config
+
+Use these values in `plugins.entries.superpowers.config`:
+
+- `enabled: true`
+- `autoSelect: true`
+- `injectSkillText: true`
+- `injectionMode: "summary"`
+- `maxInjectedChars: 3600`
+- `defaultSkill: "using-superpowers"`
+- `autoSelectSkills`: high-frequency allowlist only
+
+## Verification checklist
+
+Run after restart:
 
 ```bash
 openclaw config validate
+openclaw channels status --probe --json
 ```
 
-## 使用方式
+Check plugin behavior:
 
-### 1）自动（推荐）
+- Superpowers plugin loads without config errors
+- Skill guidance is injected in summary mode
+- No abnormal prompt growth over long sessions
+- Auto-selected skills match user intent
 
-正常提问即可。插件会自动选一个 skill 并注入 workflow 指导。
+## Troubleshooting
 
-### 2）手动（命令，确定性）
+1. Plugin loads but no effect
+   - Check `plugins.entries.superpowers.enabled` is `true`
+   - Confirm extension path is `~/.openclaw/extensions/superpowers`
 
-在任意 OpenClaw 对话入口（WebUI / Telegram / Discord）发送：
+2. Prompt too large / slow responses
+   - Ensure `injectionMode` is `summary`
+   - Lower `maxInjectedChars` further (e.g. 2800)
 
-- `/superpowers systematic-debugging summary`
-- `/superpowers test-driven-development full`
+3. Wrong auto-selected skill
+   - Narrow `autoSelectSkills` allowlist
+   - Set `defaultSkill` explicitly
 
-### 3）手动（工具，给 LLM 调用）
+4. Too many repeated tips
+   - Disable nudge hook or set `showTip: false`
 
-让智能体调用：
+## Upgrade and rollback
 
-- `superpowers({ skill: "systematic-debugging", mode: "summary" })`
+Upgrade:
 
-## 疑难解答 / FAQ
+- Replace `superpowers-extension/`
+- Keep your existing `openclaw.json`
+- Re-apply only needed config deltas
 
-### 插件找不到 / 没有加载（Plugin not found / not loaded）
+Rollback:
 
-- 确认扩展目录下的文件夹名必须是 `superpowers`：
-  - macOS: `~/.openclaw/extensions/superpowers/`
-  - Windows: `%USERPROFILE%\.openclaw\extensions\superpowers\`
-- 确认该目录下存在 `openclaw.plugin.json`
-- 执行：
+- Restore previous `~/.openclaw/extensions/superpowers`
+- Restore previous `plugins.entries.superpowers` config
+- Restart OpenClaw node
 
-```bash
-openclaw plugins list
-openclaw config validate
-```
+## License and attribution
 
-### skills 缺失（Skills missing）
-
-- 确认插件目录内存在 `skills/<name>/SKILL.md`
-
-### 本地 `gateway closed (1006 abnormal closure …)`（常见是代理导致）
-
-常见原因：代理环境变量影响本地 WS 连接（`ALL_PROXY/HTTP_PROXY/HTTPS_PROXY`）。
-
-Try (macOS/Linux):
-
-```bash
-env -u ALL_PROXY -u HTTP_PROXY -u HTTPS_PROXY openclaw gateway health
-```
-
-Try (Windows):
-
-```powershell
-$env:ALL_PROXY=""
-$env:HTTP_PROXY=""
-$env:HTTPS_PROXY=""
-openclaw gateway health
-```
-
-### 太吵（每次都提示 / 重复提示）
-
-- Set `showTip=false`:
-
-```bash
-openclaw config set plugins.entries.superpowers.config.showTip false
-```
-
-## 一键安装脚本（可选）
-
-- macOS：`scripts/install-macos.sh`
-- Windows：`scripts/install-windows.ps1`
-
-它们会：
-1) 备份已有 `~/.openclaw/extensions/superpowers`（带时间戳）  
-2) 复制当前仓库内容到目标目录  
-3) 执行 `openclaw plugins enable superpowers` + `openclaw config validate`
-
-## License / 致谢
-
-- 本项目基于上游 Superpowers（MIT License，见 `LICENSE`）。
-- 本仓库仅增加 OpenClaw 插件封装与安装文档（细节见 `NOTICE.md`）。
-- 二次分发请保留许可证与版权声明（MIT 要求）。
+- Upstream Superpowers is MIT licensed.
+- This distribution keeps upstream attribution and adds OpenClaw packaging/runtime tuning.

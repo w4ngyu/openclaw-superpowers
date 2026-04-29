@@ -1,0 +1,26 @@
+{
+  "pluginEntry": {
+    "enabled": true,
+    "config": {
+      "autoSelect": true,
+      "injectSkillText": true,
+      "showTip": true,
+      "maxInjectedChars": 3600,
+      "defaultSkill": "using-superpowers",
+      "injectionMode": "summary",
+      "autoSelectSkills": [
+        "systematic-debugging",
+        "using-superpowers",
+        "receiving-code-review",
+        "brainstorming",
+        "dispatching-parallel-agents",
+        "writing-plans",
+        "executing-plans",
+        "writing-skills",
+        "verification-before-completion"
+      ],
+      "enabled": true
+    }
+  },
+  "pluginInstall": {}
+}
